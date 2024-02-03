@@ -249,3 +249,69 @@ def detect_anomalies(df1, df2, column_list=None, contamination=0.005):
     anomalies = df2[df2['anomaly'] == -1]
 
     return anomalies
+
+def assert_dataframe_equal(df1, df2):
+    pd.testing.assert_frame_equal(df1, df2)
+
+def assert_dataframe_shape(df, shape):
+    assert df.shape == shape, f"Expected shape {shape} but got {df.shape}"
+
+def assert_dataframe_dtypes(df, expected_dtypes):
+    assert df.dtypes.equals(expected_dtypes), "Dataframe has wrong data types"
+
+def assert_no_null_values(df):
+    assert not df.isnull().values.any(), "Dataframe has null values"
+
+def assert_unique_values(df, column):
+    assert df[column].is_unique, f"Column {column} has duplicate values"
+
+def assert_no_differences(summary):
+    assert (summary['Number of Differences'] == 0).all(), "There are differences in the datasets"
+
+def assert_change_within_threshold(summary, metric, column, threshold):
+    """
+    Asserts that the change in the sum of a column between the two datasets is within a given percentage.
+
+    Parameters:
+    - summary (pd.DataFrame): The comparison summary dataframe, as output by compare_datasets
+    - metric (str): The name of the metrics to compare (Sum, Mean, Median, Std Dev)
+    - column (str): The name of the column to check
+    - threshold (float): The maximum allowable change, as a percentage. E.g., 0.05 represents a 5% change.
+    """
+    # select the rows of the summary that correspond to the specified column
+    column_summary = summary[summary['Column']==column].iloc[0]
+
+    val_df1 = column_summary[metric+' DF1']
+    val_df2 = column_summary[metric+' DF2']
+
+    # calculate the absolute percent change
+    percent_change = abs(val_df1 - val_df2) / val_df1
+
+    assert percent_change <= threshold, \
+        f"Change in {metric} for column {column} exceeds threshold: {percent_change} > {threshold}"
+
+def assert_on_rows(df1, df2, func):
+    """
+    Apply a function pairwise to rows of df1, df2 and assert that the function returns True for each pair.
+
+    Parameters:
+    - df1, df2 (pd.DataFrame): The input dataframes.
+    - func (function): A 2-argument lambda function.
+    """
+    assert len(df1) == len(df2), "Dataframes are not the same length."
+
+    for (_, row1), (_, row2) in zip(df1.iterrows(), df2.iterrows()):
+        assert func(row1, row2), \
+            f"Assertion failed for row pair:\n{row1}\n{row2}"
+
+def assert_on_columns(col1, col2, func):
+    """
+    Asserts that a function is true when applied to the input columns.
+
+    Parameters:
+    - col1, col2 (pd.Series): The input columns.
+    - func (function): A 2-argument lambda function.
+    """
+
+    assert func(col1, col2), \
+        "Assertion failed for input columns"
